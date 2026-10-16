@@ -1,0 +1,38 @@
+PC Remote - ready to run
+=========================
+
+This folder is self-contained: Node.js is included in the "runtime" folder and
+all dependencies are already in "node_modules". Nothing to install.
+
+QUICK START
+-----------
+1. Double-click  start.bat  and keep the black window open.
+2. The first run creates  data\INITIAL-PASSWORD.txt  - open it for the username
+   and the random password. Change the password in the app (Settings > Account),
+   then delete that file.
+3. On your phone (same Wi-Fi) open the https://... address printed in the window,
+   or scan the QR code in Settings. The browser warns about the self-signed
+   certificate - accept it (README shows how to trust it permanently).
+4. Allow PC Remote through Windows Firewall when asked, or run
+   allow-firewall.bat as administrator.
+
+FROM ANYWHERE (Tailscale)
+-------------------------
+To use it outside your home Wi-Fi (mobile data, another city), install the free
+Tailscale app on the phone AND on this PC and sign in to the same account. Then
+open the app's Settings > "Use it from anywhere" card and tap Recheck. It shows
+the https://<pc-name>.<tailnet>.ts.net address to use, with a QR code. No router
+changes and nothing is exposed to the public internet - only your own devices.
+"Get trusted certificate" in the same card removes the browser warning.
+
+NOTES
+-----
+- The bundled Node.js may need the "Microsoft Visual C++ 2015-2022
+  Redistributable". If start.bat reports it cannot run node, install that, or
+  install Node.js from https://nodejs.org (start.bat will then use it).
+- The native helper (data\bin\RemoteHelper.exe) is compiled automatically on
+  first use with the C# compiler that ships with Windows - no separate setup.
+- Files sent from the phone land in data\phone-storage, which is also published
+  over WebDAV so it shows up in Windows Explorer.
+
+Full documentation: README.md

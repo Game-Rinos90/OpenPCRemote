@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0f1115" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>PC Remote</title>
+<link rel="manifest" href="/manifest.json" />
+<link rel="icon" href="/icon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<section id="loginView" class="login-view">
+  <div class="login-card">
+    <h1>PC Remote</h1>
+    <p class="muted">Sign in to control this PC</p>
+    <form id="loginForm" autocomplete="on">
+      <label>Username<input id="loginUser" name="username" type="text" autocomplete="username" required /></label>
+      <label>Password<input id="loginPass" name="password" type="password" autocomplete="current-password" required /></label>
+      <button class="primary" type="submit" id="loginBtn">Sign in</button>
+      <p id="loginError" class="error" hidden></p>
+    </form>
+    <details class="qr-details">
+      <summary>Open on another device</summary>
+      <p class="muted small">Scan with your phone camera, then accept the certificate warning.</p>
+      <img id="loginQr" alt="QR code" hidden />
+      <div id="loginUrls" class="url-list small"></div>
+      <button class="chip small" id="btnCopyLoginUrl" type="button">Copy this address</button>
+      <p class="muted small">Type the address exactly as shown, including <code>https://</code>.</p>
+    </details>
+  </div>
+</section>
+
+<!-- ============ APP ============ -->
+<section id="appView" class="app-view" hidden>
+  <header class="topbar">
+    <span class="brand">PC Remote</span>
+    <span id="statusDot" class="dot" title="connection"></span>
+  </header>
+
+  <main>
+    <!-- CONTROL: the live screen at the top, trackpad + keys underneath -->
+    <section id="panel-control" class="panel active">
+      <div id="inputWarning" class="warning" hidden></div>
+
+      <div class="view-stage" id="viewStage">
+        <canvas id="screenCanvas"></canvas>
+        <div id="viewOverlay" class="view-overlay">
+          <button class="primary" id="btnStartStream">Start live screen</button>
+          <p class="muted small">Shows this PC's screen. Turn on “remote control” to drag and click straight on the image.</p>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button class="chip toggle" id="btnViewControl">🎯 Remote control</button>
+        <button class="chip" id="btnStopStream">Stop</button>
+        <button class="chip" id="btnFullscreen">⛶ Fullscreen</button>
+        <span class="muted small" id="viewStats"></span>
+      </div>
+      <div class="toolbar">
+        <button class="chip" id="btnZoomOut" title="Zoom out">🔍 −</button>
+        <button class="chip" id="btnZoomIn" title="Zoom in">🔍 ＋</button>
+        <button class="chip" id="btnZoomFit" title="Reset zoom">Fit</button>
+        <span class="muted small" id="zoomLabel">100%</span>
+        <span class="muted small">pinch or double-tap the image to zoom</span>
+      </div>
+
+      <div class="pad-row">
+        <div id="trackpad" class="trackpad">
+          <div class="trackpad-hint">
+            <strong>Trackpad</strong>
+            <span>1 finger: move &middot; 2 fingers: scroll</span>
+          </div>
+        </div>
+        <div class="pad-clicks">
+          <button class="click-btn" id="btnLeft" data-mouse="left"><span>Left</span></button>
+          <button class="click-btn" id="btnRight" data-mouse="right"><span>Right</span></button>
+          <button class="click-btn small" id="btnMiddle" data-mouse="middle"><span>Middle</span></button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button class="chip" id="btnKeyboard">⌨️ Keyboard</button>
+        <span class="muted small">press &amp; hold the click buttons to drag</span>
+      </div>
+
+      <details class="deck">
+        <summary>Keys &amp; shortcuts</summary>
+        <div class="toolbar">
+          <button class="chip mod" data-vk="27">Esc</button>
+          <button class="chip mod" data-vk="9">Tab</button>
+          <button class="chip mod" data-vk="46">Del</button>
+          <button class="chip mod" data-vk="8">⌫</button>
+          <button class="chip mod" data-vk="13">Enter</button>
+          <button class="chip mod" data-vk="38">↑</button>
+          <button class="chip mod" data-vk="40">↓</button>
+          <button class="chip mod" data-vk="37">←</button>
+          <button class="chip mod" data-vk="39">→</button>
+        </div>
+        <div class="toolbar">
+          <button class="chip toggle" data-mod="17">Ctrl</button>
+          <button class="chip toggle" data-mod="18">Alt</button>
+          <button class="chip toggle" data-mod="16">Shift</button>
+          <button class="chip toggle" data-mod="91">Win</button>
+          <button class="chip combo" data-vks="17,67">Ctrl+C</button>
+          <button class="chip combo" data-vks="17,86">Ctrl+V</button>
+          <button class="chip combo" data-vks="17,65">Ctrl+A</button>
+          <button class="chip combo" data-vks="17,90">Ctrl+Z</button>
+          <button class="chip combo" data-vks="18,9">Alt+Tab</button>
+          <button class="chip combo" data-vks="91,68">Win+D</button>
+          <button class="chip combo" data-vks="91,69">Win+E</button>
+        </div>
+      </details>
+
+      <textarea id="keySink" class="key-sink" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="keyboard input"></textarea>
+    </section>
+
+    <!-- FILES -->
+    <section id="panel-files" class="panel">
+      <div class="toolbar">
+        <button class="chip primary-chip" id="btnPickFiles">⬆️ Upload files</button>
+        <button class="chip" id="btnPickFolder">📁 Upload folder</button>
+        <button class="chip" id="btnNewFolder">＋ Folder</button>
+        <button class="chip" id="btnReveal">🖥️ Open on PC</button>
+      </div>
+      <input id="fileInput" type="file" multiple hidden />
+      <input id="folderInput" type="file" webkitdirectory directory multiple hidden />
+      <div id="uploadQueue" class="upload-queue"></div>
+      <div class="crumbs">
+        <button class="chip small" id="btnUp">↑</button>
+        <span id="crumbs" class="muted small"></span>
+      </div>
+      <div id="fileList" class="file-list"></div>
+      <div class="muted small" id="storageInfo"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="panel-settings" class="panel">
+      <h2>Account</h2>
+      <div class="card">
+        <p>Signed in as <code id="accountUser">…</code></p>
+        <button class="ghost" id="btnSignOut">Sign out</button>
+      </div>
+
+      <h2>Change password</h2>
+      <form id="passwordForm" class="card">
+        <label>Current password<input type="password" id="pwCurrent" required /></label>
+        <label>New password (min 8 chars)<input type="password" id="pwNext" required /></label>
+        <button class="primary" type="submit">Update password</button>
+        <p class="error" id="pwMsg" hidden></p>
+      </form>
+
+      <h2>Live screen</h2>
+      <div class="card">
+        <label class="range">FPS <input type="range" id="viewFps" min="1" max="20" step="1" /></label>
+        <label class="range">Quality <input type="range" id="viewQuality" min="25" max="85" step="5" /></label>
+        <button class="chip" id="btnApplyCapture">Apply</button>
+        <p class="muted small">Lower quality/fps is lighter on battery. The screen shows at the top of the <strong>Control</strong> tab.</p>
+      </div>
+
+      <h2>Trackpad</h2>
+      <div class="card">
+        <label class="range">Pointer speed <input type="range" id="setSpeed" min="0.5" max="4" step="0.1" /></label>
+        <label class="range">Scroll speed <input type="range" id="setScroll" min="0.2" max="4" step="0.1" /></label>
+        <label class="check"><input type="checkbox" id="setNatural" /> Natural scrolling</label>
+      </div>
+
+      <h2>Remote control</h2>
+      <div class="card">
+        <p class="muted small">If moving the pointer or clicking does nothing on the PC, test the connection here.</p>
+        <div class="toolbar">
+          <button class="chip" id="btnTestInput" type="button">Test input</button>
+        </div>
+        <p class="muted small" id="testInputResult">Not tested yet.</p>
+      </div>
+
+      <h2>Use it from anywhere (Tailscale)</h2>
+      <div class="card">
+        <div id="remoteStatus" class="small"></div>
+        <img id="remoteQr" alt="QR code" hidden />
+        <div class="toolbar">
+          <button class="chip" id="btnRemoteRecheck" type="button">Recheck</button>
+          <button class="chip" id="btnRemoteCopy" type="button" hidden>Copy address</button>
+          <button class="chip" id="btnRemoteCert" type="button" hidden>Get trusted certificate</button>
+        </div>
+        <p class="muted small" id="remoteMsg"></p>
+      </div>
+
+      <h2>Connect from another device</h2>
+      <div class="card">
+        <img id="settingsQr" alt="QR code" />
+        <div id="settingsUrls" class="url-list small"></div>
+      </div>
+
+      <h2>Access phone storage from Windows Explorer</h2>
+      <div class="card">
+        <p class="muted small">Map the WebDAV address as a network drive. Use the same username/password as this app.</p>
+        <div id="webdavInfo" class="small"></div>
+        <div class="toolbar">
+          <button class="chip" id="btnCopyWebdav" type="button">Copy address</button>
+          <button class="chip" id="btnCopyNetUse" type="button">Copy “net use” command</button>
+        </div>
+        <p class="muted small">
+          Put the <strong>address</strong> in Explorer (This PC → Map network drive → “Connect using different credentials”).
+          The <code>net use</code> command goes in a Command Prompt — never paste the command (or the address) into a web browser's address bar.
+        </p>
+      </div>
+
+      <h2>Storage folder on the PC</h2>
+      <div class="card small">
+        <code id="storageRoot"></code>
+        <p class="muted">Everything you upload from the phone lands here — it is a normal folder, so Explorer, backups and sync tools can use it directly.</p>
+      </div>
+
+      <h2>Notes</h2>
+      <div class="card small muted">
+        <p>Ctrl+Alt+Del and Win+L cannot be sent by any remote-control tool (Windows security), use the live view for those.</p>
+        <p>Keep this app updated and use a strong password — anything on this page can fully control the PC.</p>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab active" data-panel="control">Control</button>
+    <button class="tab" data-panel="files">Files</button>
+    <button class="tab" data-panel="settings">Settings</button>
+  </nav>
+</section>
+
+<script src="/app.js"></script>
+</body>
+</html>

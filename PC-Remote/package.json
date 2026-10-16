@@ -1,0 +1,18 @@
+{
+  "name": "pc-remote",
+  "version": "1.0.0",
+  "description": "Securely control your Windows PC from your phone: trackpad, keyboard, screen view, file transfer, WebDAV access.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "set-password": "node server.js --set-password"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.2",
+    "multer": "^2.0.2",
+    "qrcode": "^1.5.4",
+    "selfsigned": "^2.4.1",
+    "ws": "^8.18.0"
+  }
+}
